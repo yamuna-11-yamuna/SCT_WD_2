@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stopwatch & Countdown with Floating Theme Toggle</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet" />
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet" />
+  <style>
+    /* Reset and base */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Orbitron', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      color: #fff;
+      overflow: hidden;
+      transition: background 0.4s ease, color 0.4s ease;
+      position: relative;
+      padding: 20px;
+    }
+    .container {
+      text-align: center;
+      max-width: 90vw;
+      z-index: 1;
+    }
+    .circle-wrapper {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      margin: 0 auto;
+    }
+    svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform: rotate(-90deg);
+      width: 300px;
+      height: 300px;
+    }
+    .track { stroke: rgba(255, 255, 255, 0.1); }
+    body.light-theme .track {
+      stroke: rgba(0, 0, 0, 0.1) !important;
+    }
+    .time-display {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.2rem;
+      font-weight: 600;
+      text-shadow: 0 0 12px #00ffe1;
+      text-align: center;
+      user-select: none;
+    }
+    #percent { font-size: 0.9rem; margin-top: 5px; }
+    .buttons {
+      margin-top: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    .buttons button, #countdown-minutes {
+      padding: 12px 18px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(to right, #00c6ff, #0072ff);
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      user-select: none;
+    }
+    #countdown-minutes {
+      width: 100px;
+      display: none;
+    }
+    .buttons button:hover, #countdown-minutes:focus {
+      background: linear-gradient(to right, #43e97b, #38f9d7);
+      transform: scale(1.05);
+      outline: none;
+    }
+    .laps {
+      margin-top: 30px;
+      max-height: 130px;
+      overflow-y: auto;
+      list-style: none;
+      padding: 0 15px;
+      text-align: center;
+      width: 320px;
+      user-select: none;
+    }
+    .laps li {
+      background: rgba(100, 165, 246, 0.1);
+      padding: 6px 12px;
+      margin-bottom: 6px;
+      border-radius: 5px;
+      font-size: 0.9rem;
+    }
+    .laps::-webkit-scrollbar { width: 6px; }
+    .laps::-webkit-scrollbar-thumb {
+      background: #00ffe1;
+      border-radius: 10px;
+    }
+    body.light-theme {
+      background: linear-gradient(135deg, #e5eff3, #c8d7dd);
+      color: #111;
+    }
+    body.light-theme .time-display {
+      text-shadow: none;
+      color: #111;
+    }
+    body.light-theme .laps li {
+      background: rgba(0, 0, 0, 0.05);
+      color: #111;
+    }
+    @media (max-width: 600px) {
+      .circle-wrapper, svg {
+        width: 220px;
+        height: 220px;
+      }
+      .time-display { font-size: 1.5rem; }
+      .buttons button, #countdown-minutes {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+        width: auto;
+      }
+      .laps { width: 90vw; }
+    }
+
+    /* Floating theme toggle button */
+    #theme-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, #0072ff, #00c6ff);
+      color: #fff;
+      font-size: 28px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 198, 255, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s ease, transform 0.2s ease;
+      z-index: 100;
+      user-select: none;
+    }
+    #theme-btn:hover {
+      background: linear-gradient(135deg, #00ffe1, #38f9d7);
+      transform: scale(1.1);
+    }
+
+    .crazy-heading {
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      font-size: 2.5rem;
+      color: #ff0055;
+      text-align: center;
+      margin: 30px 0;
+      animation: pulseColor 2.5s infinite alternate;
+      letter-spacing: 2px;
+      user-select: none;
+    }
+
+    .crazy-heading span {
+      font-weight: 900;
+      font-size: 1.8rem;
+      color: #00ffff;
+      text-shadow:
+        0 0 5px #00ffff,
+        0 0 15px #00ffff,
+        0 0 20px #ff0055,
+        0 0 40px #ff0055;
+      animation: flicker 3s infinite alternate;
+    }
+
+    @keyframes pulseColor {
+      0% { color: #ff0055; }
+      50% { color: #ff77aa; }
+      100% { color: #ff0055; }
+    }
+
+    @keyframes flicker {
+      0%, 100% { opacity: 1; text-shadow: 0 0 10px #00ffff, 0 0 30px #ff0055; }
+      50% { opacity: 0.7; text-shadow: none; }
+    }
+  </style>
+</head>
+<body data-aos="fade-up">
+  <h1 class="crazy-heading">Time Freak Show: <span>Where Seconds Go Insane!</span></h1>
+
+  <div class="container" data-aos="zoom-in">
+    <div class="circle-wrapper">
+      <svg>
+        <defs>
+          <linearGradient id="gradient" x1="1" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#00ffe1"/>
+            <stop offset="50%" stop-color="#ff00cc"/>
+            <stop offset="100%" stop-color="#00ffe1"/>
+          </linearGradient>
+        </defs>
+        <circle class="track" cx="150" cy="150" r="150" stroke-width="12" fill="none"/>
+        <circle class="progress-ring__circle" cx="150" cy="150" r="150" stroke-width="12" fill="none" stroke="url(#gradient)"/>
+      </svg>
+      <div class="time-display" id="display">00:00.000<div id="percent">0%</div></div>
+    </div>
+
+    <div class="buttons">
+      <button id="start-btn">Start</button>
+      <button id="pause-btn" disabled>Pause</button>
+      <button id="reset-btn">Reset</button>
+      <button id="lap-btn">Lap</button>
+      <button id="export-btn">Export CSV</button>
+      <button id="mode-btn">⏱ Switch to Countdown</button>
+      <input type="number" id="countdown-minutes" placeholder="Minutes" min="1" max="999" title="Set countdown minutes" />
+    </div>
+
+    <ul class="laps" id="laps"></ul>
+    <audio id="beep" src="https://www.soundjay.com/buttons/sounds/beep-07.mp3" preload="auto"></audio>
+  </div>
+
+  <!-- Floating Theme Toggle Button -->
+  <button id="theme-btn" aria-label="Toggle Theme">🌙</button>
+
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script>
+    AOS.init();
+
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const lapBtn = document.getElementById('lap-btn');
+    const exportBtn = document.getElementById('export-btn');
+    const modeBtn = document.getElementById('mode-btn');
+    const countdownInput = document.getElementById('countdown-minutes');
+    const display = document.getElementById('display');
+    const percentDisplay = document.getElementById('percent');
+    const lapsList = document.getElementById('laps');
+    const beep = document.getElementById('beep');
+    const themeBtn = document.getElementById('theme-btn');
+
+    const circle = document.querySelector('.progress-ring__circle');
+    const radius = circle.r.baseVal.value;
+    const circumference = 2 * Math.PI * radius;
+    circle.style.strokeDasharray = circumference;
+    circle.style.strokeDashoffset = circumference;
+
+    let startTime = 0;
+    let elapsed = 0;
+    let timerInterval = null;
+    let laps = [];
+    let mode = 'stopwatch'; // or 'countdown'
+    let countdownDuration = 0; // ms
+    let remainingTime = 0;
+
+    function setProgress(percent) {
+      const offset = circumference - percent / 100 * circumference;
+      circle.style.strokeDashoffset = offset;
+      percentDisplay.textContent = `${Math.floor(percent)}%`;
+    }
+
+    function formatTime(ms) {
+      let milliseconds = ms % 1000;
+      let totalSeconds = Math.floor(ms / 1000);
+      let seconds = totalSeconds % 60;
+      let minutes = Math.floor(totalSeconds / 60);
+
+      return (
+        String(minutes).padStart(2, '0') + ':' +
+        String(seconds).padStart(2, '0') + '.' +
+        String(milliseconds).padStart(3, '0')
+      );
+    }
+
+    function updateStopwatch() {
+      elapsed = Date.now() - startTime;
+      display.textContent = formatTime(elapsed);
+      let progressPercent = (elapsed % 60000) / 60000 * 100; // progress for current minute
+      setProgress(progressPercent);
+    }
+
+    function updateCountdown() {
+      remainingTime = countdownDuration - (Date.now() - startTime);
+      if (remainingTime <= 0) {
+        remainingTime = 0;
+        display.textContent = formatTime(remainingTime);
+        setProgress(0);
+        clearInterval(timerInterval);
+        timerInterval = null;
+        pauseBtn.disabled = true;
+        startBtn.disabled = false;
+        lapBtn.disabled = true;
+        beep.play();
+        alert("⏰ Time's up!");
+        return;
+      }
+      display.textContent = formatTime(remainingTime);
+      setProgress((remainingTime / countdownDuration) * 100);
+    }
+
+    function startTimer() {
+      if (timerInterval) return;
+
+      startBtn.disabled = true;
+      pauseBtn.disabled = false;
+      lapBtn.disabled = false;
+
+      if (mode === 'stopwatch') {
+        startTime = Date.now() - elapsed;
+        timerInterval = setInterval(updateStopwatch, 10);
+      } else {
+        if (remainingTime === 0) {
+          let minutes = parseInt(countdownInput.value, 10);
+          if (isNaN(minutes) || minutes <= 0) {
+            alert('Please enter a valid number of minutes for countdown!');
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            lapBtn.disabled = true;
+            return;
+          }
+          countdownDuration = minutes * 60000;
+          remainingTime = countdownDuration;
+        }
+        startTime = Date.now() - (countdownDuration - remainingTime);
+        timerInterval = setInterval(updateCountdown, 10);
+      }
+    }
+
+    function pauseTimer() {
+      if (!timerInterval) return;
+
+      clearInterval(timerInterval);
+      timerInterval = null;
+
+      if (mode === 'stopwatch') {
+        elapsed = Date.now() - startTime;
+      } else {
+        remainingTime = countdownDuration - (Date.now() - startTime);
+      }
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      elapsed = 0;
+      remainingTime = 0;
+      countdownDuration = 0;
+      laps = [];
+      lapsList.innerHTML = '';
+      display.textContent = mode === 'stopwatch' ? "00:00.000" : "00:00.000";
+      setProgress(0);
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+      lapBtn.disabled = true;
+      if (mode === 'countdown') countdownInput.value = '';
+    }
+
+    function recordLap() {
+      let lapTime = mode === 'stopwatch' ? elapsed : countdownDuration - remainingTime;
+      laps.push(lapTime);
+      const li = document.createElement('li');
+      li.textContent = `Lap ${laps.length}: ${formatTime(lapTime)}`;
+      lapsList.prepend(li);
+    }
+
+    function exportCSV() {
+      if (laps.length === 0) {
+        alert("No laps to export!");
+        return;
+      }
+      let csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "Lap Number,Time\n";
+      laps.forEach((lapTime, i) => {
+        csvContent += `${i + 1},${formatTime(lapTime)}\n`;
+      });
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `laps_${mode}_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    function toggleMode() {
+      if (timerInterval) {
+        alert("Please reset timer before switching mode.");
+        return;
+      }
+      if (mode === 'stopwatch') {
+        mode = 'countdown';
+        modeBtn.textContent = "⏰ Switch to Stopwatch";
+        countdownInput.style.display = 'inline-block';
+        lapBtn.disabled = true;
+        display.textContent = "00:00.000";
+        setProgress(100);
+      } else {
+        mode = 'stopwatch';
+        modeBtn.textContent = "⏰ Switch to Countdown";
+        countdownInput.style.display = 'none';
+        lapBtn.disabled = true;
+        display.textContent = "00:00.000";
+        setProgress(0);
+      }
+      laps = [];
+      lapsList.innerHTML = '';
+    }
+
+    // Theme toggle (dark/light) with localStorage persistence
+    function loadTheme() {
+      const theme = localStorage.getItem('theme') || 'dark';
+      if (theme === 'light') {
+        document.body.classList.add('light-theme');
+        themeBtn.textContent = '🌙';
+      } else {
+        document.body.classList.remove('light-theme');
+        themeBtn.textContent = '☀️';
+      }
+    }
+    function toggleTheme() {
+      if (document.body.classList.contains('light-theme')) {
+        document.body.classList.remove('light-theme');
+        themeBtn.textContent = '☀️';
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.body.classList.add('light-theme');
+        themeBtn.textContent = '🌙';
+        localStorage.setItem('theme', 'light');
+      }
+    }
+
+    // Event listeners
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseTimer);
+    resetBtn.addEventListener('click', resetTimer);
+    lapBtn.addEventListener('click', recordLap);
+    exportBtn.addEventListener('click', exportCSV);
+    modeBtn.addEventListener('click', toggleMode);
+    themeBtn.addEventListener('click', toggleTheme);
+
+    // Initialize
+    pauseBtn.disabled = true;
+    lapBtn.disabled = true;
+    countdownInput.style.display = 'none';
+    setProgress(0);
+    loadTheme();
+  </script>
+</body>
+</html>
